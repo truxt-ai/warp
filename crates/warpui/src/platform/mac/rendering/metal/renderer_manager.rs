@@ -16,15 +16,21 @@ impl RendererManager {
         }
     }
 
-    pub fn renderer_for_device(&mut self, device: &metal::Device) -> &mut Renderer {
+    pub fn renderer_for_device(
+        &mut self,
+        device: &metal::Device,
+    ) -> anyhow::Result<&mut Renderer> {
         use std::collections::hash_map::Entry::*;
         match self.renderers.entry(device.registry_id()) {
-            Occupied(entry) => entry.into_mut(),
-            Vacant(entry) => entry.insert(Renderer::new(
-                device,
-                metal::MTLPixelFormat::BGRA8Unorm,
-                rendering::GlyphConfig::default(),
-            )),
+            Occupied(entry) => Ok(entry.into_mut()),
+            Vacant(entry) => {
+                let renderer = Renderer::new(
+                    device,
+                    metal::MTLPixelFormat::BGRA8Unorm,
+                    rendering::GlyphConfig::default(),
+                )?;
+                Ok(entry.insert(renderer))
+            }
         }
     }
 }
