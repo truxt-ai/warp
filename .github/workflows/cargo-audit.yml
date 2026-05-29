@@ -1,0 +1,31 @@
+name: Rust Security Audit
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  schedule:
+    - cron: '0 8 * * 1'
+
+jobs:
+  cargo-audit:
+    name: cargo audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+      - name: Run cargo audit
+        run: cargo audit
+
+  cargo-outdated:
+    name: cargo outdated
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cargo-outdated
+        run: cargo install cargo-outdated --locked
+      - name: Check for outdated crates
+        run: |
+          cargo outdated --exit-code 1
