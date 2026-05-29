@@ -57,6 +57,10 @@ struct SettingsInfo {
 /// cloud preferences in sync with each other without creating a direct
 /// dependency between the define_settings_group macros and the
 /// cloud preferences syncing machinery.
+///
+/// TODO(refactor): split into SettingsRegistry (static metadata) and
+/// SettingsDispatcher (runtime update/load/clear callbacks) — the single
+/// struct has grown too large and the two concerns make unit-testing hard.
 #[derive(Default)]
 pub struct SettingsManager {
     /// Settings info by storage key
