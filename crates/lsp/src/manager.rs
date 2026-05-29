@@ -25,6 +25,16 @@ pub enum LspManagerModelEvent {
         server_type: LSPServerType,
         server_id: LanguageServerId,
     },
+    /// WIP: surface LSP `$/progress` notifications to the UI status bar.
+    /// The token and message are forwarded from the server's work-done progress
+    /// begin/report/end notifications. Rendering logic is tracked in issue #89.
+    ProgressNotification {
+        workspace_root: PathBuf,
+        token: String,
+        message: Option<String>,
+        percentage: Option<u32>,
+        done: bool,
+    },
 }
 
 #[derive(Default)]
