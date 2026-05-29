@@ -25,7 +25,11 @@ use std::sync::atomic::{AtomicBool, Ordering};
 /// # Examples
 /// - `"appearance.text.font_name"` → `"font_name"`
 /// - `"font_name"` → `"font_name"`
+/// - `""` → `""` (empty path returns empty string, not a panic)
 pub const fn toml_path_storage_key(path: &str) -> &str {
+    if path.is_empty() {
+        return path;
+    }
     let bytes = path.as_bytes();
     let mut i = path.len();
     while i > 0 {
@@ -45,7 +49,11 @@ pub const fn toml_path_storage_key(path: &str) -> &str {
 /// # Examples
 /// - `"appearance.text.font_name"` → `Some("appearance.text")`
 /// - `"font_name"` → `None`
+/// - `""` → `None`
 pub const fn toml_path_hierarchy(path: &str) -> Option<&str> {
+    if path.is_empty() {
+        return None;
+    }
     let bytes = path.as_bytes();
     let mut i = path.len();
     while i > 0 {
