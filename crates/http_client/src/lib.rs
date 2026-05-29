@@ -49,6 +49,28 @@ pub mod headers {
 /// list of `Name:Value` pairs, where each pair is split on the first colon.
 const EXTRA_HTTP_HEADERS_ENV_VAR: &str = "WARP_EXTRA_HTTP_HEADERS";
 
+/// Retry policy applied to idempotent requests that fail with a transient error
+/// (connection reset, 429, 503).
+///
+/// WIP: the backoff logic exists but is not yet wired into [`Client::send`].
+/// Tracking issue: #67.
+#[derive(Clone, Debug)]
+pub struct RetryPolicy {
+    /// Maximum number of retry attempts (not counting the initial attempt).
+    pub max_retries: u32,
+    /// Initial backoff duration in milliseconds; doubled on each subsequent retry.
+    pub base_backoff_ms: u64,
+}
+
+impl Default for RetryPolicy {
+    fn default() -> Self {
+        Self {
+            max_retries: 3,
+            base_backoff_ms: 200,
+        }
+    }
+}
+
 /// A wrapper around a `reqwest::Client` to execute requests. Returns a custom `RequestBuilder` type
 /// that ensures any call to the underlying `reqwest::Client` are properly adapted so that they can
 /// run outside of a Tokio context.
@@ -62,6 +84,10 @@ pub struct Client {
 
     /// A callback that is executed on after each response is received.
     after_response_received: Option<ResponseHookFn>,
+
+    /// WIP: retry policy for transient failures. Currently stored but not applied.
+    #[allow(dead_code)]
+    retry_policy: Option<RetryPolicy>,
 }
 
 /// Type for 'hook' functions to be executed prior to sending a request. A reference to the
