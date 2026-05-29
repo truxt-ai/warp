@@ -1,0 +1,25 @@
+Cargo.toml
+  s_a5d20aef014428::t_8a17d8afbf2040 112
+  s_a5d20aef014428::t_80c9b7ae363be1 213
+  s_a5d20aef014428::t_507fda031e8390 134
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.10",
+  "base_commit_sha": "f95cca17e7efc4b60a8a7c942124c1c3f16f690e",
+  "prompts": {},
+  "sessions": {
+    "s_a5d20aef014428": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "dc7a1971-6448-4917-828a-bfe56cb71c73",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "raunakTruxt <raunakp@truxt.ai>",
+      "total_additions": 3,
+      "total_deletions": 3,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    }
+  }
+}
