@@ -78,14 +78,26 @@ impl FuzzyMatchResult {
 /// If query does contain uppercase letters, then it will be case sensitive.
 /// Returns struct that contains the score of the match and a vector
 /// of matching byte indices.
+///
+/// An empty query returns `None` — callers that want "match everything" on an
+/// empty query should handle that case before calling this function.
 pub fn match_indices(text: &str, query: &str) -> Option<FuzzyMatchResult> {
+    if query.is_empty() {
+        return None;
+    }
     match_internal(text, query, SkimMatcherV2::default())
 }
 
 /// Performs a case insensitive fuzzy matching algorithm on text and query strings.
 /// Returns struct that contains the score of the match and a vector
 /// of matching byte indices.
+///
+/// An empty query returns `None` — callers that want "match everything" on an
+/// empty query should handle that case before calling this function.
 pub fn match_indices_case_insensitive(text: &str, query: &str) -> Option<FuzzyMatchResult> {
+    if query.is_empty() {
+        return None;
+    }
     match_internal(text, query, SkimMatcherV2::default().ignore_case())
 }
 
