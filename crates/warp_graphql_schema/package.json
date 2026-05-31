@@ -4,7 +4,8 @@
     "generate": "graphql-codegen -r ts-node/register"
   },
   "dependencies": {
-    "graphql": "^16.8.1"
+    "graphql": "^16.8.1",
+    "ws": "8.20.1"
   },
   "devDependencies": {
     "@graphql-codegen/cli": "^5.0.2",
@@ -15,6 +16,7 @@
   },
   "resolutions": {
     "immutable": "3.8.3",
-    "lodash": "4.18.1"
+    "lodash": "4.18.1",
+    "ws": "8.20.1"
   }
 }
