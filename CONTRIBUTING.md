@@ -166,3 +166,4 @@ See [`SECURITY.md`](SECURITY.md) for our security disclosure policy and private 
 - Browse the [Warp docs](https://docs.warp.dev/).
 - Join the [Slack Community](https://go.warp.dev/join-preview) to ask questions and connect with other contributors.
 - Open a [GitHub issue](https://github.com/warpdotdev/warp/issues) for bugs or feature requests.
+
