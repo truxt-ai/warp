@@ -11,7 +11,7 @@
   "author": "eng@warp.dev",
   "license": "",
   "devDependencies": {
-    "typescript": "^5.2.2"
+    "typescript": "^6.0.3"
   },
   "packageManager": "yarn@4.0.1"
 }
