@@ -1,0 +1,25 @@
+Cargo.toml
+  s_97e1ae24605937::t_0aee91cffaccc4 134
+  s_97e1ae24605937::t_0ac64ca70e9502 213
+  s_97e1ae24605937::t_05511506c21ff6 112
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.10",
+  "base_commit_sha": "c5fb3437dcb96b55c70ea686f1ecba5f4c84c773",
+  "prompts": {},
+  "sessions": {
+    "s_97e1ae24605937": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9e89571d-ad2d-46c4-912e-9bf37cb9c1ff",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Crazyop757 <83007860+Crazyop757@users.noreply.github.com>",
+      "total_additions": 3,
+      "total_deletions": 3,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    }
+  }
+}
