@@ -47,7 +47,34 @@ pub mod headers {
 /// The environment variable containing extra HTTP headers to attach to requests.
 /// Only read when the channel is `Channel::Integration`. The value is a newline-separated
 /// list of `Name:Value` pairs, where each pair is split on the first colon.
+///
+/// # Trust model
+///
+/// This escape hatch exists for integration / staging test harnesses. Anything that controls
+/// the Warp process's environment can inject these headers, so the parser refuses to override
+/// security-sensitive headers (`Authorization`, `Cookie`, `Set-Cookie`, `Host`,
+/// `Proxy-Authorization`) and Warp's own internal `X-Warp-*` trust signals. Production builds
+/// (`Channel::Production`) ignore the variable entirely.
 const EXTRA_HTTP_HEADERS_ENV_VAR: &str = "WARP_EXTRA_HTTP_HEADERS";
+
+/// Header names the [`EXTRA_HTTP_HEADERS_ENV_VAR`] escape hatch must never override.
+///
+/// Compared case-insensitively. `HeaderName::as_str()` returns the lowercase form, so these
+/// entries are kept lowercase to match directly.
+const EXTRA_HTTP_HEADERS_RESERVED: &[&str] = &[
+    "authorization",
+    "cookie",
+    "set-cookie",
+    "host",
+    "proxy-authorization",
+];
+
+/// Returns `true` if a header name is reserved and must not be overridden via
+/// [`EXTRA_HTTP_HEADERS_ENV_VAR`]. The check is case-insensitive: callers should pass
+/// `HeaderName::as_str()`, which is already lowercase.
+fn is_extra_http_headers_reserved(name: &str) -> bool {
+    EXTRA_HTTP_HEADERS_RESERVED.contains(&name) || name.starts_with("x-warp-")
+}
 
 /// A wrapper around a `reqwest::Client` to execute requests. Returns a custom `RequestBuilder` type
 /// that ensures any call to the underlying `reqwest::Client` are properly adapted so that they can
@@ -279,6 +306,13 @@ impl Client {
                     HeaderValue::from_str(value),
                 ) {
                     (Ok(name), Ok(value)) => {
+                        if is_extra_http_headers_reserved(name.as_str()) {
+                            log::warn!(
+                                "Refusing to override reserved header `{}` from {EXTRA_HTTP_HEADERS_ENV_VAR}",
+                                name.as_str()
+                            );
+                            continue;
+                        }
                         builder = builder.header(name, value);
                     }
                     _ => {
@@ -691,5 +725,39 @@ impl<'c> oauth2::AsyncHttpClient<'c> for Client {
                 .body(response_body)
                 .map_err(oauth2::HttpClientError::Http)
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_extra_http_headers_reserved;
+
+    #[test]
+    fn reserved_security_headers_are_rejected() {
+        for name in [
+            "authorization",
+            "cookie",
+            "set-cookie",
+            "host",
+            "proxy-authorization",
+        ] {
+            assert!(
+                is_extra_http_headers_reserved(name),
+                "expected {name} to be reserved"
+            );
+        }
+    }
+
+    #[test]
+    fn warp_internal_headers_are_rejected() {
+        assert!(is_extra_http_headers_reserved("x-warp-client-id"));
+        assert!(is_extra_http_headers_reserved("x-warp-os-name"));
+    }
+
+    #[test]
+    fn unrelated_headers_are_allowed() {
+        assert!(!is_extra_http_headers_reserved("x-debug-trace"));
+        assert!(!is_extra_http_headers_reserved("accept"));
+        assert!(!is_extra_http_headers_reserved("x-request-id"));
     }
 }
