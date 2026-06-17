@@ -1,0 +1,48 @@
+name: NPM Security Audit
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  npm-audit:
+    name: NPM Vulnerability Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        working-directory: ./tools
+        run: npm install
+      - name: Run npm audit
+        working-directory: ./tools
+        run: npm audit --audit-level=moderate
+
+  npm-outdated:
+    name: NPM Outdated Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        working-directory: ./tools
+        run: npm install
+      - name: Fail on outdated packages
+        working-directory: ./tools
+        run: |
+          npm outdated --json > outdated.json 2>&1 || true
+          COUNT=$(node -e "const d=require('./outdated.json'); console.log(Object.keys(d).length)")
+          echo "Found $COUNT outdated packages"
+          if [ "$COUNT" -gt "0" ]; then
+            node -e "
+              const d=require('./outdated.json');
+              Object.entries(d).forEach(([k,v]) =>
+                console.error(k + ': ' + v.current + ' → ' + v.latest)
+              ); process.exit(1)"
+          fi
