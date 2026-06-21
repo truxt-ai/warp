@@ -51,6 +51,11 @@ pub struct VimFSA {
     register: char,
     /// Holds the last [`VimEvent`] where [`VimEventType::for_dot_repeat`] returns `Some`.
     dot_repeat_event: Option<VimEvent>,
+    /// WIP: timeout (ms) after which an incomplete operator-pending sequence is cancelled.
+    /// Mirrors Vim's `timeoutlen`. Currently always `None`; proper integration with the
+    /// event loop is tracked in issue #42.
+    #[allow(dead_code)]
+    operator_timeout_ms: Option<u64>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
