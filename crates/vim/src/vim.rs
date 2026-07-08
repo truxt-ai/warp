@@ -196,31 +196,33 @@ enum PendingOperand {
     SquareBracket(Direction),
 }
 
-impl From<char> for PendingOperand {
-    fn from(c: char) -> Self {
+impl TryFrom<char> for PendingOperand {
+    type Error = ();
+
+    fn try_from(c: char) -> Result<Self, Self::Error> {
         match c {
-            'g' => Self::G,
-            'i' => Self::TextObject(TextObjectInclusion::Inner),
-            'a' => Self::TextObject(TextObjectInclusion::Around),
-            'f' => Self::FindChar {
+            'g' => Ok(Self::G),
+            'i' => Ok(Self::TextObject(TextObjectInclusion::Inner)),
+            'a' => Ok(Self::TextObject(TextObjectInclusion::Around)),
+            'f' => Ok(Self::FindChar {
                 direction: Direction::Forward,
                 destination: FindCharDestination::AtChar,
-            },
-            't' => Self::FindChar {
+            }),
+            't' => Ok(Self::FindChar {
                 direction: Direction::Forward,
                 destination: FindCharDestination::BeforeChar,
-            },
-            'F' => Self::FindChar {
+            }),
+            'F' => Ok(Self::FindChar {
                 direction: Direction::Backward,
                 destination: FindCharDestination::AtChar,
-            },
-            'T' => Self::FindChar {
+            }),
+            'T' => Ok(Self::FindChar {
                 direction: Direction::Backward,
                 destination: FindCharDestination::BeforeChar,
-            },
-            '[' => Self::SquareBracket(Direction::Backward),
-            ']' => Self::SquareBracket(Direction::Forward),
-            _ => panic!("invalid char for PendingOperand: {c}"),
+            }),
+            '[' => Ok(Self::SquareBracket(Direction::Backward)),
+            ']' => Ok(Self::SquareBracket(Direction::Forward)),
+            _ => Err(()),
         }
     }
 }
@@ -253,42 +255,44 @@ enum PendingAction {
     SetRegister,
 }
 
-impl From<char> for PendingAction {
-    fn from(c: char) -> Self {
+impl TryFrom<char> for PendingAction {
+    type Error = ();
+
+    fn try_from(c: char) -> Result<Self, Self::Error> {
         match c {
-            'd' => Self::Operation {
+            'd' => Ok(Self::Operation {
                 operator: VimOperator::Delete,
                 pending_operand: None,
-            },
-            'c' => Self::Operation {
+            }),
+            'c' => Ok(Self::Operation {
                 operator: VimOperator::Change,
                 pending_operand: None,
-            },
-            'y' => Self::Operation {
+            }),
+            'y' => Ok(Self::Operation {
                 operator: VimOperator::Yank,
                 pending_operand: None,
-            },
-            'g' => Self::G,
-            'f' => Self::FindChar {
+            }),
+            'g' => Ok(Self::G),
+            'f' => Ok(Self::FindChar {
                 direction: Direction::Forward,
                 destination: FindCharDestination::AtChar,
-            },
-            't' => Self::FindChar {
+            }),
+            't' => Ok(Self::FindChar {
                 direction: Direction::Forward,
                 destination: FindCharDestination::BeforeChar,
-            },
-            'F' => Self::FindChar {
+            }),
+            'F' => Ok(Self::FindChar {
                 direction: Direction::Backward,
                 destination: FindCharDestination::AtChar,
-            },
-            'T' => Self::FindChar {
+            }),
+            'T' => Ok(Self::FindChar {
                 direction: Direction::Backward,
                 destination: FindCharDestination::BeforeChar,
-            },
-            '[' => Self::SquareBracket(Direction::Backward),
-            ']' => Self::SquareBracket(Direction::Forward),
-            '"' => Self::SetRegister,
-            _ => panic!("Invalid char for PendingAction: {c}"),
+            }),
+            '[' => Ok(Self::SquareBracket(Direction::Backward)),
+            ']' => Ok(Self::SquareBracket(Direction::Forward)),
+            '"' => Ok(Self::SetRegister),
+            _ => Err(()),
         }
     }
 }
@@ -345,16 +349,18 @@ pub struct VimTextObject {
     pub object_type: TextObjectType,
 }
 
-impl From<char> for TextObjectType {
-    fn from(c: char) -> Self {
+impl TryFrom<char> for TextObjectType {
+    type Error = ();
+
+    fn try_from(c: char) -> Result<Self, Self::Error> {
         match c {
-            'w' | 'W' => TextObjectType::Word(WordType::from(c)),
-            'p' => TextObjectType::Paragraph,
-            '\'' | '"' | '`' => TextObjectType::Quote(QuoteType::from(c)),
+            'w' | 'W' => Ok(TextObjectType::Word(WordType::from(c))),
+            'p' => Ok(TextObjectType::Paragraph),
+            '\'' | '"' | '`' => Ok(TextObjectType::Quote(QuoteType::try_from(c)?)),
             'b' | 'B' | '(' | ')' | '[' | ']' | '{' | '}' => {
-                TextObjectType::Block(BracketType::from(c))
+                Ok(TextObjectType::Block(BracketType::try_from(c)?))
             }
-            _ => panic!("Invalid char for TextObjectType: {c}"),
+            _ => Err(()),
         }
     }
 }
@@ -376,13 +382,15 @@ impl QuoteType {
     }
 }
 
-impl From<char> for QuoteType {
-    fn from(c: char) -> Self {
+impl TryFrom<char> for QuoteType {
+    type Error = ();
+
+    fn try_from(c: char) -> Result<Self, Self::Error> {
         match c {
-            '\'' => Self::Single,
-            '"' => Self::Double,
-            '`' => Self::Backtick,
-            _ => panic!("invalid char for QuoteType: {c}"),
+            '\'' => Ok(Self::Single),
+            '"' => Ok(Self::Double),
+            '`' => Ok(Self::Backtick),
+            _ => Err(()),
         }
     }
 }
@@ -402,13 +410,15 @@ pub enum BracketType {
     SquareBracket,
 }
 
-impl From<char> for BracketType {
-    fn from(c: char) -> Self {
+impl TryFrom<char> for BracketType {
+    type Error = ();
+
+    fn try_from(c: char) -> Result<Self, Self::Error> {
         match c {
-            '(' | ')' | 'b' => Self::Parenthesis,
-            '[' | ']' => Self::SquareBracket,
-            '{' | '}' | 'B' => Self::CurlyBrace,
-            _ => panic!("Invalid char for BracketType: {c}"),
+            '(' | ')' | 'b' => Ok(Self::Parenthesis),
+            '[' | ']' => Ok(Self::SquareBracket),
+            '{' | '}' | 'B' => Ok(Self::CurlyBrace),
+            _ => Err(()),
         }
     }
 }
@@ -918,7 +928,7 @@ impl VimFSA {
                 ),
                 'r' => self.change_mode(VimMode::Replace.into()),
                 'g' | 'd' | 'c' | 'y' | 'f' | 'F' | 't' | 'T' | '[' | ']' | '"' => {
-                    self.pending_action = Some(PendingAction::from(c));
+                    self.pending_action = PendingAction::try_from(c).ok();
                     return None;
                 }
                 'D' => self.create_operation(
@@ -1077,7 +1087,7 @@ impl VimFSA {
                             Direction::Backward => BracketEnd::Closing,
                             Direction::Forward => BracketEnd::Opening,
                         },
-                        kind: BracketType::from(c),
+                        kind: BracketType::try_from(c).ok()?,
                     }))
                 }
                 _ => {
@@ -1133,7 +1143,7 @@ impl VimFSA {
             'i' | 'a' | 'g' | 'f' | 'F' | 't' | 'T' | '[' | ']' => {
                 self.pending_action = Some(PendingAction::Operation {
                     operator,
-                    pending_operand: Some(PendingOperand::from(c)),
+                    pending_operand: PendingOperand::try_from(c).ok(),
                 });
                 return None;
             }
@@ -1328,7 +1338,7 @@ impl VimFSA {
                     operator,
                     VimOperand::TextObject(VimTextObject {
                         inclusion,
-                        object_type: TextObjectType::from(c),
+                        object_type: TextObjectType::try_from(c).ok()?,
                     }),
                 ),
                 _ => {
@@ -1345,7 +1355,7 @@ impl VimFSA {
                                 Direction::Backward => BracketEnd::Closing,
                                 Direction::Forward => BracketEnd::Opening,
                             },
-                            kind: BracketType::from(c),
+                            kind: BracketType::try_from(c).ok()?,
                         }),
                         motion_type: MotionType::Charwise,
                     },
@@ -1372,7 +1382,7 @@ impl VimFSA {
                         }
                         VimEventType::VisualTextObject(VimTextObject {
                             inclusion,
-                            object_type: TextObjectType::from(c),
+                            object_type: TextObjectType::try_from(c).ok()?,
                         })
                     }
                     _ => {
@@ -1468,7 +1478,7 @@ impl VimFSA {
                 }
             }
             'g' | 'f' | 'F' | 't' | 'T' | '[' | ']' | '"' => {
-                self.pending_action = Some(PendingAction::from(c));
+                self.pending_action = PendingAction::try_from(c).ok();
                 return None;
             }
             'i' => {
@@ -1546,7 +1556,7 @@ impl VimFSA {
                             Direction::Backward => BracketEnd::Closing,
                             Direction::Forward => BracketEnd::Opening,
                         },
-                        kind: BracketType::from(c),
+                        kind: BracketType::try_from(c).ok()?,
                     }))
                 }
                 _ => {
