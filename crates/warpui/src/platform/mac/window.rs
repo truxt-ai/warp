@@ -1032,14 +1032,17 @@ impl WindowState {
     }
 
     /// Attempts to resize the renderer with the new physical size of the window. Noops if there is
-    /// no device or the renderer manager is unset.
+    /// no device or the renderer manager is unset, or if renderer initialization fails.
     fn resize_renderer(&self) {
         if let Some((renderer_manager, device)) = self.renderer_manager.as_ref().zip(self.device())
         {
             let mut renderer_manager = renderer_manager.borrow_mut();
-            let renderer = renderer_manager.renderer_for_device(device, self.physical_size());
-
-            renderer.resize(self);
+            match renderer_manager.renderer_for_device(device, self.physical_size()) {
+                Ok(renderer) => renderer.resize(self),
+                Err(e) => {
+                    log::error!("failed to obtain renderer during resize: {e:#}");
+                }
+            }
         }
     }
 
@@ -1354,7 +1357,14 @@ extern "C-unwind" fn warp_update_layer(this: &Object) {
             .as_ref()
             .expect("warp_update_layer should never be called twice in parallel")
             .borrow_mut();
-        let renderer = renderer_manager.renderer_for_device(device, window.physical_size());
+        let renderer = match renderer_manager.renderer_for_device(device, window.physical_size())
+        {
+            Ok(renderer) => renderer,
+            Err(e) => {
+                log::error!("failed to obtain renderer for frame: {e:#}");
+                return;
+            }
+        };
 
         app::callback_dispatcher().with_mutable_app_context(|ctx| {
             renderer.render(&scene, window.as_ref(), ctx.font_cache());

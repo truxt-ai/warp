@@ -1,5 +1,6 @@
 use crate::rendering::atlas::{AllocatedRegion, TextureId};
 use crate::rendering::{get_best_dash_gap, GlyphCache, GlyphRasterBoundsFn, RasterizeGlyphFn};
+use anyhow::Context as _;
 use warpui_core::{
     fonts::{self, SubpixelAlignment},
     rendering::{self, texture_cache::TextureCache},
@@ -136,46 +137,84 @@ impl Renderer {
         device: &metal::Device,
         color_pixel_format: metal::MTLPixelFormat,
         glyph_config: rendering::GlyphConfig,
-    ) -> Self {
+    ) -> anyhow::Result<Self> {
         let library = if cfg!(feature = "enable-metal-frame-capture") {
-            let temp_lib_path = std::env::temp_dir().join("shaders.metallib");
+            // Use a per-PID path so concurrent Warp processes (e.g. preview + stable on the
+            // same machine) don't race on a single shared file.
+            let temp_lib_path = std::env::temp_dir()
+                .join(format!("shaders-{}.metallib", std::process::id()));
+            let mut write_result: std::io::Result<()> = Ok(());
             WRITE_LIB_TO_FILE.call_once(|| {
-                let mut file = File::create(&temp_lib_path).unwrap();
-                file.write_all(METAL_LIB_BYTES).unwrap();
+                write_result = (|| -> std::io::Result<()> {
+                    let mut file = File::create(&temp_lib_path)?;
+                    file.write_all(METAL_LIB_BYTES)?;
+                    Ok(())
+                })();
             });
-            device.new_library_with_file(temp_lib_path).unwrap()
+            write_result.with_context(|| {
+                format!(
+                    "writing Metal shader library to {}",
+                    temp_lib_path.display()
+                )
+            })?;
+            device
+                .new_library_with_file(&temp_lib_path)
+                .map_err(|e| {
+                    anyhow::anyhow!(
+                        "loading Metal shader library from {}: {e}",
+                        temp_lib_path.display()
+                    )
+                })?
         } else {
-            device.new_library_with_data(METAL_LIB_BYTES).unwrap()
+            device
+                .new_library_with_data(METAL_LIB_BYTES)
+                .map_err(|e| anyhow::anyhow!("loading embedded Metal shader library: {e}"))?
         };
 
-        let rect_vertex_shader = library.get_function("rect_vertex_shader", None).unwrap();
-        let rect_fragment_shader = library.get_function("rect_fragment_shader", None).unwrap();
+        let rect_vertex_shader = library
+            .get_function("rect_vertex_shader", None)
+            .map_err(|e| anyhow::anyhow!("loading rect_vertex_shader: {e}"))?;
+        let rect_fragment_shader = library
+            .get_function("rect_fragment_shader", None)
+            .map_err(|e| anyhow::anyhow!("loading rect_fragment_shader: {e}"))?;
         let rect_pipeline = Self::create_pipeline(
             "Rects",
             color_pixel_format,
             &rect_vertex_shader,
             &rect_fragment_shader,
         );
-        let draw_rects_pipeline_state = device.new_render_pipeline_state(&rect_pipeline).unwrap();
+        let draw_rects_pipeline_state = device
+            .new_render_pipeline_state(&rect_pipeline)
+            .map_err(|e| anyhow::anyhow!("creating Rects render pipeline state: {e}"))?;
 
-        let image_fragment_shader = library.get_function("image_fragment_shader", None).unwrap();
+        let image_fragment_shader = library
+            .get_function("image_fragment_shader", None)
+            .map_err(|e| anyhow::anyhow!("loading image_fragment_shader: {e}"))?;
         let image_pipeline = Self::create_pipeline(
             "Images",
             color_pixel_format,
             &rect_vertex_shader,
             &image_fragment_shader,
         );
-        let draw_images_pipeline_state = device.new_render_pipeline_state(&image_pipeline).unwrap();
+        let draw_images_pipeline_state = device
+            .new_render_pipeline_state(&image_pipeline)
+            .map_err(|e| anyhow::anyhow!("creating Images render pipeline state: {e}"))?;
 
-        let glyph_vertex_shader = library.get_function("glyph_vertex_shader", None).unwrap();
-        let glyph_fragment_shader = library.get_function("glyph_fragment_shader", None).unwrap();
+        let glyph_vertex_shader = library
+            .get_function("glyph_vertex_shader", None)
+            .map_err(|e| anyhow::anyhow!("loading glyph_vertex_shader: {e}"))?;
+        let glyph_fragment_shader = library
+            .get_function("glyph_fragment_shader", None)
+            .map_err(|e| anyhow::anyhow!("loading glyph_fragment_shader: {e}"))?;
         let glyph_pipeline = Self::create_pipeline(
             "Glyphs",
             color_pixel_format,
             &glyph_vertex_shader,
             &glyph_fragment_shader,
         );
-        let draw_glyphs_pipeline_state = device.new_render_pipeline_state(&glyph_pipeline).unwrap();
+        let draw_glyphs_pipeline_state = device
+            .new_render_pipeline_state(&glyph_pipeline)
+            .map_err(|e| anyhow::anyhow!("creating Glyphs render pipeline state: {e}"))?;
 
         let quad_vertices = new_metal_buffer(
             device,
@@ -196,7 +235,7 @@ impl Renderer {
 
         let glyph_cache = GlyphCache::new(glyph_config);
 
-        Self {
+        Ok(Self {
             resources: Resources {
                 draw_rects_pipeline_state,
                 draw_images_pipeline_state,
@@ -207,7 +246,7 @@ impl Renderer {
                 texture_cache: TextureCache::new(),
             },
             command_queue: device.new_command_queue(),
-        }
+        })
     }
 
     fn create_pipeline(
@@ -221,7 +260,11 @@ impl Renderer {
         pipeline.set_vertex_function(Some(vertex_shader));
         pipeline.set_fragment_function(Some(fragment_shader));
 
-        let attachment = pipeline.color_attachments().object_at(0).unwrap();
+        let attachment = pipeline.color_attachments().object_at(0).unwrap_or_else(|| {
+            panic!(
+                "{label} render pipeline descriptor unexpectedly has no color attachment slot 0"
+            )
+        });
         attachment.set_pixel_format(color_pixel_format);
         attachment.set_blending_enabled(true);
         attachment.set_rgb_blend_operation(MTLBlendOperation::Add);
